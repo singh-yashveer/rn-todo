@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   SafeAreaView,
   StatusBar,
@@ -12,26 +12,80 @@ import {
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 import {NativeInput} from '../shared/components/input';
 import TaskList from '../features/tasks/TaskList/ui';
+import {loadTasks, saveTasks} from '../features/tasks/api/tasks';
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() !== 'dark';
-  const [task, setTask] = useState<string>('');
-  const [taskList, setTaskList] = useState<string[]>([]);
+  const [todo, setTodo] = useState<string>('');
+  const [tasks, setTasks] = useState<
+    {id: string; title: string; completed: boolean}[]
+  >([]);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [_loading, setLoading] = useState<boolean>(false);
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  const addTask = () => {
-    if (task.trim()) {
-      setTaskList([...taskList, task]);
-      setTask('');
+  const fetchTasks = async () => {
+    setLoading(true);
+    const storedTasks = await loadTasks();
+    setTasks(storedTasks);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const addTask = async () => {
+    if (todo.trim()) {
+      setLoading(true);
+      let updatedTasks;
+      if (editingTaskId) {
+        updatedTasks = tasks.map(task =>
+          task.id === editingTaskId ? {...task, title: todo} : task,
+        );
+        setEditingTaskId(null);
+      } else {
+        updatedTasks = [
+          ...tasks,
+          {id: String(tasks.length + 1), title: todo, completed: false},
+        ];
+      }
+      setTasks(updatedTasks);
+      await saveTasks(updatedTasks);
+      setLoading(false);
+      setTodo('');
     }
   };
 
-  const deleteTask = (index: number) => {
-    const updatedTasks = taskList.filter((_, i) => i !== index);
-    setTaskList(updatedTasks);
+  const removeTask = async (id: string) => {
+    setLoading(true);
+    const updatedTasks = tasks.filter(task => task.id !== id);
+    setTasks(updatedTasks);
+    await saveTasks(updatedTasks);
+    if (editingTaskId === id) {
+      setEditingTaskId(null);
+      setTodo('');
+    }
+    setLoading(false);
+  };
+
+  const updateTask = (id: string) => {
+    const task = tasks.find(task => task.id === id);
+    if (task) {
+      setTodo(task.title);
+      setEditingTaskId(id);
+    }
+  };
+
+  const toggleTaskCompletion = async (id: string) => {
+    const updatedTasks = tasks.map(task =>
+      task.id === id ? {...task, completed: !task.completed} : task,
+    );
+    setTasks(updatedTasks);
+    await saveTasks(updatedTasks);
   };
 
   return (
@@ -45,14 +99,19 @@ function App(): React.JSX.Element {
         <NativeInput
           placeholder="Add a new task"
           placeholderTextColor={Colors.black}
-          value={task}
-          onChangeText={setTask}
+          value={todo}
+          onChangeText={setTodo}
         />
         <TouchableOpacity style={styles.addButton} onPress={addTask}>
           <Text style={styles.addButtonLabel}>Add</Text>
         </TouchableOpacity>
       </View>
-      <TaskList taskList={taskList} deleteTask={deleteTask} />
+      <TaskList
+        taskList={tasks}
+        deleteTask={removeTask}
+        updateTask={updateTask}
+        toggleCompletion={toggleTaskCompletion}
+      />
     </SafeAreaView>
   );
 }
@@ -80,11 +139,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     marginBottom: 20,
+    marginHorizontal: 10,
   },
   addButton: {
     backgroundColor: Colors.blue,
     padding: 10,
     borderRadius: 5,
+    width: 60,
   },
   addButtonLabel: {
     color: Colors.black,
