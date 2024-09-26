@@ -12,12 +12,18 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
     borderBottomColor: Colors.light,
     borderBottomWidth: 1,
+    marginHorizontal: 10,
+  },
+  functionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
   },
   taskText: {
     fontSize: 18,
     color: Colors.black,
   },
-  deleteText: {
+  functionText: {
     color: Colors.red,
     fontSize: 16,
   },
@@ -25,5 +31,9 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     color: Colors.black,
+  },
+  completedTaskText: {
+    textDecorationLine: 'line-through',
+    color: Colors.grey,
   },
 });

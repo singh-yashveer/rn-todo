@@ -2,7 +2,7 @@ import {StyleSheet} from 'react-native';
 
 export const styles = StyleSheet.create({
   inputWrapper: {
-    marginBottom: 16,
+    width: '80%',
   },
   label: {
     marginBottom: 8,
